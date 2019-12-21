@@ -3,29 +3,7 @@ import queue
 import socket
 import threading
 import time
-
-
-def _try_to_int(value):
-    try:
-        value = int(value)
-    except ValueError:
-        pass
-    return value
-
-
-def validate_distance(distance):
-    distance = min(distance, 500)
-    return max(distance, 20)
-
-
-def validate_angle(degree):
-    degree = min(degree, 3600)
-    return max(degree, 1)
-
-
-def validate_speed(speed):
-    speed = min(speed, 100)
-    return max(speed, 10)
+from utils import validate_bounds as validate, try_to_int
 
 
 class Drone:
@@ -124,7 +102,7 @@ class Drone:
         return self.send_command('emergency')
 
     def _move(self, direction, distance):
-        return self.send_command(f'{direction} {validate_distance(distance)}')
+        return self.send_command(f'{direction} {validate(distance, 20, 500)}')
 
     def move_backward(self, distance):
         return self._move('back', distance)
@@ -145,7 +123,7 @@ class Drone:
         return self._move('down', distance)
 
     def _turn(self, direction, degree):
-        return self.send_command(f'{direction} {validate_angle(degree)}')
+        return self.send_command(f'{direction} {validate(degree, 1, 3600)}')
 
     def clockwise(self, degree):
         return self._turn('cw', degree)
@@ -169,15 +147,17 @@ class Drone:
         return self._flip('b')
 
     def go_location(self, x, y, z, speed):
-        return self.send_command(f'go {validate_distance(x)} {validate_distance(y)}'
-                                 f'{validate_distance(z)} {speed}')
+        def vd(distance): 
+            return validate(distance, 20, 500)
+        return self.send_command(f'go {vd(x)} {vd(y)} {vd(z)} {speed}')
 
     def curve(self, x1, y1, z1, x2, y2, z2, speed):
-        return self.send_command(f'curve {validate_distance(x1)} {validate_distance(y1)} {validate_distance(z1)} '
-                                 f'{validate_distance(x2)} {validate_distance(y2)} {validate_distance(z2)} {speed}')
+        def vd(distance): 
+            return validate(distance, 20, 500)
+        return self.send_command(f'curve {vd(x1)} {vd(y1)} {vd(z1)} {vd(x2)} {vd(y2)} {vd(z2)} {speed}')
 
     def set_speed(self, speed):
-        return self.send_command(f'speed {validate_speed(speed)}')
+        return self.send_command(f'speed {validate(speed, 10, 100)}')
 
     def set_rc(self, a, b, c, d):
         return self.send_command(f'rc {a} {b} {c} {d}')
@@ -186,19 +166,19 @@ class Drone:
         return self.send_command(f'wifi {ssid} {passwd}')
 
     def get_speed(self):  # Unit: cm/s
-        return _try_to_int(self.send_command('speed?'))
+        return try_to_int(self.send_command('speed?'))
 
     def get_battery(self):  # Unit: %
-        return _try_to_int(self.send_command('battery?'))
+        return try_to_int(self.send_command('battery?'))
 
     def get_flight_time(self):  # Unit: s
-        return _try_to_int(self.send_command('time?'))
+        return try_to_int(self.send_command('time?'))
 
     def get_height(self):  # Unit: cm
-        return _try_to_int(self.send_command('height?'))
+        return try_to_int(self.send_command('height?'))
 
     def get_temp(self):  # Unit: °C
-        return _try_to_int(self.send_command('temp?'))
+        return try_to_int(self.send_command('temp?'))
 
     def get_attitude(self):  # IMU Attitude Data
         return self.send_command('attitude?')
