@@ -1,3 +1,5 @@
+import threading
+
 def validate_bounds(value, lower, upper):
     """
     :return: value if lower <= value <= upper
@@ -60,3 +62,29 @@ def command_wrapper(to_validate=(), result_conversion=None, command_timeout=None
         return send_command
 
     return _decorated
+
+
+class AtomicInteger:
+    def __init__(self, value=0):
+        self._value = value
+        self._lock = threading.Lock()
+
+    def inc(self):
+        with self._lock:
+            self._value += 1
+            return self._value
+
+    def dec(self):
+        with self._lock:
+            self._value -= 1
+        return self._value
+
+    @property
+    def value(self):
+        with self._lock:
+            return self._value
+
+    @value.setter
+    def value(self, val):
+        with self._lock:
+            self._value = val

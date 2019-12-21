@@ -3,7 +3,7 @@ import queue
 import socket
 import threading
 import time
-from utils import validate_bounds as validate, try_to_int
+from utils import validate_bounds as validate, try_to_int, AtomicInteger
 
 
 class Drone:
@@ -11,12 +11,15 @@ class Drone:
     TELLO_VIDEO_PORT = 11111
     TELLO_STATE_PORT = 8890
 
-    def __init__(self, local_ip='', local_port=8889, state_interval=0.2, command_timeout=5.0, tello_ip='192.168.10.1'):
+    def __init__(self, local_ip='', local_port=8889, state_interval=0.2, command_timeout=3.0, move_timeout=15.0,
+                 tello_ip='192.168.10.1'):
 
         self.state_interval = state_interval
         self.command_timeout = command_timeout
+        self.move_timeout = move_timeout
 
         self.response_queue = queue.Queue(1)
+        self.scheduled_responses = AtomicInteger()
         self.states = {}
 
         self.tello_address = (tello_ip, self.TELLO_COMMAND_PORT)
@@ -44,9 +47,13 @@ class Drone:
         while True:
             try:
                 data, _ = self.socket.recvfrom(1518)
-                print(data)
                 if data:
-                    self.response_queue.put(data.decode(encoding='utf-8'))
+                    if self.scheduled_responses.value == 0:
+                        self.response_queue.put(data.decode(encoding='utf-8'))
+                    else:
+                        self.scheduled_responses.dec()
+                        logging.warning('Not Putting Response into Queue. Response probably from other Command that '
+                                        'timed out')
             except socket.error:
                 logging.error('Ack Socket Failed')
             except UnicodeDecodeError:
@@ -68,7 +75,7 @@ class Drone:
             except UnicodeDecodeError:
                 logging.error('Illegal Answer?')
 
-    def send_command(self, command, command_timeout=None):
+    def send_command(self, command, command_timeout=None, ignore_none_response=False):
         if command_timeout is None:
             command_timeout = self.command_timeout
         print('>> Send Command:', command)
@@ -78,9 +85,12 @@ class Drone:
         try:
             command_response = self.response_queue.get(timeout=command_timeout)
         except queue.Empty:
-            logging.error("Empty Response Queue")
+            if not ignore_none_response:
+                logging.error("Empty Response Queue")
+                self.scheduled_responses.inc()
             command_response = "none_response"
 
+        logging.debug(command_response)
         return command_response
 
     def enter_sdk_mode(self):
@@ -93,16 +103,16 @@ class Drone:
         return self.send_command('streamoff')
 
     def take_off(self):
-        return self.send_command('takeoff', 10)  # Takeoff Command takes longer than other Commands
+        return self.send_command('takeoff', self.move_timeout)
 
     def land(self):
-        return self.send_command('land', 10)  # Land Command can take longer than other Commands
+        return self.send_command('land', self.move_timeout)
 
     def emergency(self):
-        return self.send_command('emergency')
+        return self.send_command('emergency', ignore_none_response=True)
 
     def _move(self, direction, distance):
-        return self.send_command(f'{direction} {validate(distance, 20, 500)}')
+        return self.send_command(f'{direction} {validate(distance, 20, 500)}', self.move_timeout)
 
     def move_backward(self, distance):
         return self._move('back', distance)
@@ -123,7 +133,7 @@ class Drone:
         return self._move('down', distance)
 
     def _turn(self, direction, degree):
-        return self.send_command(f'{direction} {validate(degree, 1, 3600)}')
+        return self.send_command(f'{direction} {validate(degree, 1, 3600)}', self.move_timeout)
 
     def clockwise(self, degree):
         return self._turn('cw', degree)
@@ -149,12 +159,13 @@ class Drone:
     def go_location(self, x, y, z, speed):
         def vd(distance): 
             return validate(distance, 20, 500)
-        return self.send_command(f'go {vd(x)} {vd(y)} {vd(z)} {speed}')
+        return self.send_command(f'go {vd(x)} {vd(y)} {vd(z)} {speed}', self.move_timeout)
 
     def curve(self, x1, y1, z1, x2, y2, z2, speed):
         def vd(distance): 
             return validate(distance, 20, 500)
-        return self.send_command(f'curve {vd(x1)} {vd(y1)} {vd(z1)} {vd(x2)} {vd(y2)} {vd(z2)} {speed}')
+        return self.send_command(f'curve {vd(x1)} {vd(y1)} {vd(z1)} {vd(x2)} {vd(y2)} {vd(z2)} {speed}',
+                                 self.move_timeout)
 
     def set_speed(self, speed):
         return self.send_command(f'speed {validate(speed, 10, 100)}')
