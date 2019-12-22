@@ -1,5 +1,6 @@
 import threading
 
+
 def validate_bounds(value, lower, upper):
     """
     :return: value if lower <= value <= upper

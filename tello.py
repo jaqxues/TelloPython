@@ -53,7 +53,7 @@ class Drone:
                     else:
                         self.scheduled_responses.dec()
                         logging.warning('Not Putting Response into Queue. Response probably from other Command that '
-                                        'timed out')
+                                        f'timed out (Response Value: {data})')
             except socket.error:
                 logging.error('Ack Socket Failed')
             except UnicodeDecodeError:
@@ -75,19 +75,21 @@ class Drone:
             except UnicodeDecodeError:
                 logging.error('Illegal Answer?')
 
-    def send_command(self, command, command_timeout=None, ignore_none_response=False):
+    def send_command(self, command, command_timeout=None, none_response=False):
         if command_timeout is None:
             command_timeout = self.command_timeout
         print('>> Send Command:', command)
 
         self.socket.sendto(command.encode(encoding='utf-8'), self.tello_address)
 
+        if none_response:
+            logging.debug(f'Not awaiting response for command {command}')
+            return 'ok'
         try:
             command_response = self.response_queue.get(timeout=command_timeout)
         except queue.Empty:
-            if not ignore_none_response:
-                logging.error("Empty Response Queue")
-                self.scheduled_responses.inc()
+            logging.error("Empty Response Queue")
+            self.scheduled_responses.inc()
             command_response = "none_response"
 
         logging.debug(command_response)
@@ -109,7 +111,7 @@ class Drone:
         return self.send_command('land', self.move_timeout)
 
     def emergency(self):
-        return self.send_command('emergency', ignore_none_response=True)
+        return self.send_command('emergency', none_response=True)  # For some reason does not send any response
 
     def _move(self, direction, distance):
         return self.send_command(f'{direction} {validate(distance, 20, 500)}', self.move_timeout)
