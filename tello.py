@@ -92,6 +92,9 @@ class Drone:
             self.scheduled_responses.inc()
             command_response = "none_response"
 
+        if command.endswith("?"):
+            command_response = command_response.replace("\r\n", "")
+
         logging.debug(command_response)
         return command_response
 
@@ -159,13 +162,15 @@ class Drone:
         return self._flip('b')
 
     def go_location(self, x, y, z, speed):
-        def vd(distance): 
+        def vd(distance):
             return validate(distance, 20, 500)
+
         return self.send_command(f'go {vd(x)} {vd(y)} {vd(z)} {speed}', self.move_timeout)
 
     def curve(self, x1, y1, z1, x2, y2, z2, speed):
-        def vd(distance): 
+        def vd(distance):
             return validate(distance, 20, 500)
+
         return self.send_command(f'curve {vd(x1)} {vd(y1)} {vd(z1)} {vd(x2)} {vd(y2)} {vd(z2)} {speed}',
                                  self.move_timeout)
 
@@ -202,7 +207,7 @@ class Drone:
     def get_acceleration(self):  # Unit: 0.001g
         return self.send_command('acceleration?')
 
-    def get_tof_distance(self):  # Unit: cm
+    def get_tof_distance(self):
         return self.send_command('tof?')
 
     def get_wifi_snr(self):
@@ -210,3 +215,6 @@ class Drone:
 
     def get_last_states(self):
         return self.states
+
+
+logging.basicConfig(level=logging.DEBUG)
