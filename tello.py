@@ -3,10 +3,12 @@ import queue
 import socket
 import threading
 import time
+
 from utils import validate_bounds as validate, try_to_int, AtomicInteger
+from abc import ABC, abstractmethod
 
 
-class Drone:
+class DroneInterface(ABC):
     TELLO_COMMAND_PORT = 8889
     TELLO_VIDEO_PORT = 11111
     TELLO_STATE_PORT = 8890
@@ -98,6 +100,15 @@ class Drone:
         logging.debug(command_response)
         return command_response
 
+    @abstractmethod
+    def get_sdk_name(self):
+        pass
+
+
+class Drone1_3(DroneInterface):
+    def get_sdk_name(self):
+        return "1.3"
+
     def enter_sdk_mode(self):
         return self.send_command('command')
 
@@ -117,7 +128,7 @@ class Drone:
         return self.send_command('emergency', none_response=True)  # For some reason does not send any response
 
     def _move(self, direction, distance):
-        return self.send_command(f'{direction} {validate(distance, 20, 500)}', self.move_timeout)
+        return self.send_command(f'{direction} {self._validate_move_distance(distance)}', self.move_timeout)
 
     def move_backward(self, distance):
         return self._move('back', distance)
@@ -138,7 +149,7 @@ class Drone:
         return self._move('down', distance)
 
     def _turn(self, direction, degree):
-        return self.send_command(f'{direction} {validate(degree, 1, 3600)}', self.move_timeout)
+        return self.send_command(f'{direction} {self._validate_degree(degree)}', self.move_timeout)
 
     def clockwise(self, degree):
         return self._turn('cw', degree)
@@ -162,22 +173,17 @@ class Drone:
         return self._flip('b')
 
     def go_location(self, x, y, z, speed):
-        def vd(distance):
-            return validate(distance, 20, 500)
-
-        return self.send_command(f'go {vd(x)} {vd(y)} {vd(z)} {speed}', self.move_timeout)
+        return self.send_command(self._go_location_command(x, y, z, speed), self.move_timeout)
 
     def curve(self, x1, y1, z1, x2, y2, z2, speed):
-        def vd(distance):
-            return validate(distance, 20, 500)
-
-        return self.send_command(f'curve {vd(x1)} {vd(y1)} {vd(z1)} {vd(x2)} {vd(y2)} {vd(z2)} {speed}',
-                                 self.move_timeout)
+        return self.send_command(self._curve_command(x1, y1, z1, x2, y2, z2, speed), self.move_timeout)
 
     def set_speed(self, speed):
         return self.send_command(f'speed {validate(speed, 10, 100)}')
 
     def set_rc(self, a, b, c, d):
+        for x in (a, b, c, d):
+            assert -100 < x < 100
         return self.send_command(f'rc {a} {b} {c} {d}')
 
     def set_wifi_password(self, ssid, passwd):
@@ -215,6 +221,80 @@ class Drone:
 
     def get_last_states(self):
         return self.states
+
+    def _validate_distance(self, dist):
+        return validate(dist, 20, 500)
+
+    def _validate_move_distance(self, dist):
+        return validate(dist, 20, 500)
+
+    def _validate_degree(self, degree):
+        return validate(degree, 1, 3600)
+
+    def _go_location_command(self, x, y, z, speed):
+        dist = ' '.join(map(self._validate_distance, (x, y, z)))
+
+        return f'go {dist} {validate(speed, 10, 100)}'
+
+    def _curve_command(self, x1, y1, z1, x2, y2, z2, speed):
+        dist = ' '.join(map(self._validate_distance, (x1, y1, z1, x2, y2, z2)))
+
+        return f'curve {dist} {validate(speed, 10, 60)}'
+
+
+class Drone2_0(Drone1_3):
+    def get_sdk_name(self):
+        return "2.0"
+
+    def _turn(self, direction, degree):
+        return self.send_command(f'{direction} {validate(degree, 1, 360)}', self.move_timeout)
+
+    def stop(self):
+        return self.send_command('stop')
+
+    def _validate_distance(self, dist):
+        return validate(dist, -500, 500)
+
+    def _validate_degree(self, degree):
+        return validate(degree, 1, 360)
+
+    def go_location(self, x, y, z, speed):
+        assert not all(map(lambda i: -20 < i < 20, (x, y, z)))
+
+        return super().go_location(x, y, z, speed)
+
+    def start_mpd(self):
+        return self.send_command("mon")
+
+    def stop_mpd(self):
+        return self.send_command("moff")
+
+    def mpd_direction(self, x):
+        assert x in range(3)
+        return self.send_command(f"mdirection {x}")
+
+    def connect_ap(self, ssid, passwd):
+        return self.send_command(f"ap {ssid} {passwd}")
+
+    def jump(self, x, y, z, speed, yaw, mid1, mid2):
+        _assert_mid(mid1, mid2)
+        dist = ' '.join(map(self._validate_distance, (x, y, z)))
+
+        return self.send_command(f'{dist}, {validate(speed, 10, 100)}, {yaw}, {mid1}, {mid2}')
+
+    def curve_mpd(self, x1, y1, z1, x2, y2, z2, speed, mid):
+        _assert_mid(mid)
+        return self.send_command(f'{self._curve_command(x1, y1, z1, x2, y2, z2, speed)} {mid}', self.move_timeout)
+
+    def go_location_mpd(self, x, y, z, speed, mid):
+        _assert_mid(mid)
+        return self.send_command(f'{self._go_location_command(x, y, z, speed)} {mid}', self.move_timeout)
+
+
+def _assert_mid(*mids):
+    pads = map(lambda i: f'm{i}', range(1, 9))
+    for mid in mids:
+        assert mid in pads
 
 
 logging.basicConfig(level=logging.DEBUG)
