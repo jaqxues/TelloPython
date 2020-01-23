@@ -109,7 +109,6 @@ class AdvancedTello:
             self._send_packet(SocketPacket(self.CMD_ID_TIME_REQ, None, 80, 0))
         logging.debug(f"Received Command {packet.cmd_id}")
 
-
     # Mostly found in com.ryzerobotics.tello.gcs.core.cmd.d (ZOCmdStore)
     def _send_packet(self, packet: SocketPacket):
         """Sends packets, intercepts Commands that need special treatment (CMD_ID_CONN_REQ) etc."""
@@ -133,15 +132,6 @@ class AdvancedTello:
                              dt.minute.to_bytes(2, byteorder='little') +
                              dt.second.to_bytes(2, byteorder='little') +
                              (dt.microsecond & 0xffff).to_bytes(2, byteorder='little'))
-
-            # data = bytearray(15)
-            # data[1:3] = dt.year.to_bytes(2, byteorder='little')
-            # data[3:5] = dt.month.to_bytes(2, byteorder='little')
-            # data[5:7] = dt.day.to_bytes(2, byteorder='little')
-            # data[7:9] = dt.hour.to_bytes(2, byteorder='little')
-            # data[9:11] = dt.minute.to_bytes(2, byteorder='little')
-            # data[11:13] = dt.second.to_bytes(2, byteorder='little')
-            # data[13:15] = (dt.microsecond & 0xffff).to_bytes(2, byteorder='little')
 
             seq = self.seq_num
             self.seq_num += 1
