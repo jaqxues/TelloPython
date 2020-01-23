@@ -54,3 +54,29 @@ def write_cmd_ids(jadx_source_path):
 
 
 jadx_source_path = "/home/jaqxues/CodeProjects/Tello_1.1.1_Sources/"
+
+CODES_CRC8 = read_crc_codes("codes_crc8")
+CODES_CRC16 = read_crc_codes("codes_crc16")
+
+
+# Algorithm found in com.ryzerobotics.tello.gcs.core.a
+def calc_crc16(buf, size):
+    i = 0
+    code = 13970  # public static int a
+    while size > 0:
+        code = CODES_CRC16[(code ^ buf[i]) & 0xff] ^ (code >> 8)
+        i += 1
+        size -= 1
+    return code
+
+
+# Algorithm found in com.ryzerobotics.tello.gcs.core.b
+def calc_crc8(buf, size):
+    i = 0
+    code = 119
+    while size > 0:
+        code = CODES_CRC8[(code ^ buf[i]) & 0xff]
+        i += 1
+        size -= 1
+
+    return code
