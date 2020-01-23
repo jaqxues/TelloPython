@@ -114,6 +114,8 @@ class AdvancedTello:
 
     def stop_joystick(self):
         self.joystick_emitter.stop()
+        self.update_joystick(1024, 1024, 1024, 1024, 0)
+        self._emit_joystick_data()
 
     def update_joystick(self, roll, pitch, throttle, yaw, speed_mode=0):
         """Values for roll, pitch, throttle, yaw:
