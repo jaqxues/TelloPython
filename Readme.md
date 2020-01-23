@@ -23,3 +23,18 @@ Rewriting Tello Python Apis for Python3
 * Similarly, you can hook the constructor of the class `com.ryzerobotics.tello.gcs.core.c` ("ZOCmdParser") and log 
   the `cmdId` field of the result of method `com.ryzerobotics.tello.gcs.ui.bean.SocketPacketEntity a(byte[], int)`. 
   Note that the `byte[]` sometimes contains useful information in form of text.
+
+## Using the joystick command
+The joystick is handled by `com.ryzerobotics.tello.gcs.core.cmd.d.a(int, int, long, long, long)`
+Values are set using Commands in "ZOCmdSendManager". Chinese names for the values are mentioned in log statements with 
+tag "yaogan" - "Joystick"). You can understand their meaning by Trial and Error or hooking the Tello App and seeing
+what values are passed to the method when using the Joystick in app.
+
+| Chinese names | Directions                   | Name     |
+| ------------- |:-----------------------------| :--------|
+| zuoYou        | right - left                 | roll     |
+| qianHou       | forward - backward           | pitch    |
+| shangXia      | up - down                    | throttle |
+| xuanZhan      | clockwise - counterclockwise | yaw      |
+
+The last `long` argument does not have a specific name and I could not figure out what it does.

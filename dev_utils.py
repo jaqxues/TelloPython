@@ -21,7 +21,7 @@ def read_crc_codes(_file):
 
 def find_cmd_ids(file_path):
     dic = {}
-    match_id_compares = re.compile("(\.cmdId == \d*)")
+    match_id_compares = re.compile(r"(\.cmdId == \d*)")
     for file in os.listdir(file_path):
         with open(os.path.join(file_path, file), "r") as f:
             content = f.read()
@@ -36,7 +36,7 @@ def write_cmd_ids(jadx_source_path):
     package_path = "sources/com/ryzerobotics/tello/gcs/core/cmd/"
     with open("cmd_ids", "w") as f:
         re_class = re.compile(r"class (.+) extends e {")
-        re_source = re.compile("/\* compiled from: (.+) \*/")
+        re_source = re.compile(r"/\* compiled from: (.+) \*/")
         for k, v in sorted(list(find_cmd_ids(os.path.join(jadx_source_path, package_path)).items()),
                            key=lambda it: it[0]):
             f.write("\n# ===\n")

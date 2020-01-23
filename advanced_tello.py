@@ -101,10 +101,13 @@ class AdvancedTello:
     def take_off(self):
         self._send_packet(SocketPacket(self.CMD_ID_TAKE_OFF, 104))
 
+    def update_joystick(self, roll, pitch, throttle, yaw, j3):
+        self.joystick_data = ((roll & 2047) | ((pitch & 2047) << 11)) | ((2047 & throttle) << 22) | ((2047 & yaw) << 33) | (j3 << 44)
+
     def _receive_cmds(self):
         while True:
             try:
-                data, _ = self.socket.recvfrom(2 ** 10)
+                data, _ = self.socket.recvfrom(1024)
                 packet = SocketPacket.from_raw_bytes(self, data)
                 self._handle_received_packet(packet)
             except socket.error:
