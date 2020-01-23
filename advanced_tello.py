@@ -7,7 +7,7 @@ from dev_utils import calc_crc8, calc_crc16
 
 
 class SocketPacket:
-    def __init__(self, cmd_id, data, pac_type, seq_num):
+    def __init__(self, cmd_id, pac_type, seq_num=0, data=None):
         self.cmd_id = cmd_id
         self.data = data
         self.pac_type = pac_type
@@ -39,7 +39,7 @@ class SocketPacket:
             size = int.from_bytes(raw[1:3], byteorder='little') >> 3
 
             # Check CRC8 Values
-            crc8_check = int.from_bytes(raw[3], byteorder='little')
+            crc8_check = raw[3]
             crc8_actual = calc_crc8(raw, 3)
             if crc8_actual != crc8_check:
                 logging.error(f"Mismatched CRC8 Values: (Expected - Actual) -> ({crc8_check} - {crc8_actual})")
@@ -47,10 +47,10 @@ class SocketPacket:
             # Check CRC16 Values
             crc16_check = int.from_bytes(raw[-2:], byteorder='little')
             crc16_actual = calc_crc16(raw, size - 2)
-            if crc8_actual != crc16_check:
+            if crc16_actual != crc16_check:
                 logging.error(f"Mismatched CRC16 Values: (Expected - Actual) -> ({crc16_check} - {crc16_actual})")
 
-            pac_type = int.from_bytes(raw[4], byteorder='little')
+            pac_type = raw[4]
             cmd_id = int.from_bytes(raw[5:7], byteorder='little')
             seq_num = int.from_bytes(raw[7:9], byteorder='little')
             data = raw[9:-2]
@@ -61,6 +61,7 @@ class SocketPacket:
             if raw == bytearray(b'conn_ack' + tello.PORT_TELLO_VIDEO.to_bytes(2, byteorder='little')):
                 return cls(tello.CMD_ID_CONN_ACK, None, None, None)
             logging.error("Mismatched Video Ports")
+        return SocketPacket(-1, -1, -1, None)
 
 
 class AdvancedTello:
@@ -69,6 +70,7 @@ class AdvancedTello:
     CMD_ID_VIDEO_STUFF = 37  # TODO Figure out what this is
     CMD_ID_TIME_REQ = 70
     CMD_ID_JOYSTICK = 80
+    CMD_ID_TAKE_OFF = 84
     CMD_ID_ALT_LIMIT = 4182
 
     PORT_TELLO_CMD = 8889
@@ -93,6 +95,12 @@ class AdvancedTello:
     def __del__(self):
         self.socket.close()
 
+    def connect(self):
+        self._send_packet(SocketPacket(self.CMD_ID_CONN_REQ, 0))
+
+    def take_off(self):
+        self._send_packet(SocketPacket(self.CMD_ID_TAKE_OFF, 104))
+
     def _receive_cmds(self):
         while True:
             try:
@@ -106,7 +114,7 @@ class AdvancedTello:
         if packet.cmd_id == self.CMD_ID_CONN_ACK:
             logging.debug("Successfully connected to Tello")
         elif packet.cmd_id == self.CMD_ID_TIME_REQ:
-            self._send_packet(SocketPacket(self.CMD_ID_TIME_REQ, None, 80, 0))
+            self._send_packet(SocketPacket(self.CMD_ID_TIME_REQ, 80))
         logging.debug(f"Received Command {packet.cmd_id}")
 
     # Mostly found in com.ryzerobotics.tello.gcs.core.cmd.d (ZOCmdStore)
