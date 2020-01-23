@@ -37,4 +37,14 @@ what values are passed to the method when using the Joystick in app.
 | shangXia      | up - down                    | throttle |
 | xuanZhan      | clockwise - counterclockwise | yaw      |
 
-The last `long` argument does not have a specific name and I could not figure out what it does.
+The last `long` argument does not have a specific name and I could not figure out what it does. The app uses either 0
+or 1 for this argument.
+The values of the other arguments are ints between 364 - 1684 (both included).
+
+* Min (movement on corresponding axis): 364
+* ...
+* Normal (no movement on corresponding axis): 1024
+* ...
+* Max (movement on corresponding axis): 1684
+
+Speed given by `abs(1024 - x)`. Direction given by `x > 1024`

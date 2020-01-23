@@ -116,7 +116,14 @@ class AdvancedTello:
         self.joystick_emitter.stop()
 
     def update_joystick(self, roll, pitch, throttle, yaw, j3):
-        """Standard Values: 1024, 1024, 1024, 1024, 0"""
+        """Values for roll, pitch, throttle, yaw:
+                Min (movement on corresponding axis): 364
+                ...
+                Normal (no movement on corresponding axis): 1024
+                ...
+                Max (movement on corresponding axis): 1684
+            j3: 0 or 1 (No idea what it does)
+        """
         self.joystick_data = ((roll & 2047) | ((pitch & 2047) << 11)) | ((2047 & throttle) << 22) \
                              | ((2047 & yaw) << 33) | (j3 << 44)
 
