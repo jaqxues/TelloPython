@@ -4,6 +4,7 @@ import threading
 from datetime import datetime
 
 from dev_utils import calc_crc8, calc_crc16
+from utils import RepeatedTimer
 
 
 class SocketPacket:
@@ -58,9 +59,10 @@ class SocketPacket:
             return cls(cmd_id, data, pac_type, seq_num)
 
         elif prefix == 99:
-            if raw == bytearray(b'conn_ack' + tello.PORT_TELLO_VIDEO.to_bytes(2, byteorder='little')):
-                return cls(tello.CMD_ID_CONN_ACK, None, None, None)
-            logging.error("Mismatched Video Ports")
+            if raw == bytearray(b'conn_ack:' + tello.PORT_TELLO_VIDEO.to_bytes(2, byteorder='little')):
+                return cls(tello.CMD_ID_CONN_ACK, 0)
+            logging.error(f"Mismatched Video Ports (Expected - Actual): {tello.PORT_TELLO_VIDEO} - "
+                          f"{int.from_bytes(raw[-2:], byteorder='little')}")
         return SocketPacket(-1, -1, -1, None)
 
 
@@ -71,6 +73,7 @@ class AdvancedTello:
     CMD_ID_TIME_REQ = 70
     CMD_ID_JOYSTICK = 80
     CMD_ID_TAKE_OFF = 84
+    CMD_ID_LAND = 85
     CMD_ID_ALT_LIMIT = 4182
 
     PORT_TELLO_CMD = 8889
@@ -91,9 +94,11 @@ class AdvancedTello:
 
         self.seq_num = 0
         self.joystick_data = 0
+        self.joystick_emitter = RepeatedTimer(0.02, self._emit_joystick_data)
 
     def __del__(self):
         self.socket.close()
+        self.joystick_emitter.stop()
 
     def connect(self):
         self._send_packet(SocketPacket(self.CMD_ID_CONN_REQ, 0))
@@ -101,8 +106,19 @@ class AdvancedTello:
     def take_off(self):
         self._send_packet(SocketPacket(self.CMD_ID_TAKE_OFF, 104))
 
+    def land(self):
+        self._send_packet(SocketPacket(self.CMD_ID_LAND, 104, data=bytearray(b'\x00')))
+
+    def start_joystick(self):
+        self.joystick_emitter.start()
+
+    def stop_joystick(self):
+        self.joystick_emitter.stop()
+
     def update_joystick(self, roll, pitch, throttle, yaw, j3):
-        self.joystick_data = ((roll & 2047) | ((pitch & 2047) << 11)) | ((2047 & throttle) << 22) | ((2047 & yaw) << 33) | (j3 << 44)
+        """Standard Values: 1024, 1024, 1024, 1024, 0"""
+        self.joystick_data = ((roll & 2047) | ((pitch & 2047) << 11)) | ((2047 & throttle) << 22) \
+                             | ((2047 & yaw) << 33) | (j3 << 44)
 
     def _receive_cmds(self):
         while True:
@@ -113,12 +129,15 @@ class AdvancedTello:
             except socket.error:
                 logging.error("Command Socket Failed")
 
+    def _emit_joystick_data(self):
+        self._send_packet(SocketPacket(self.CMD_ID_JOYSTICK, 96))
+
     def _handle_received_packet(self, packet):
         if packet.cmd_id == self.CMD_ID_CONN_ACK:
             logging.debug("Successfully connected to Tello")
         elif packet.cmd_id == self.CMD_ID_TIME_REQ:
             self._send_packet(SocketPacket(self.CMD_ID_TIME_REQ, 80))
-        logging.debug(f"Received Command {packet.cmd_id}")
+        # logging.debug(f"Received Command {packet.cmd_id}")
 
     # Mostly found in com.ryzerobotics.tello.gcs.core.cmd.d (ZOCmdStore)
     def _send_packet(self, packet: SocketPacket):
@@ -128,8 +147,7 @@ class AdvancedTello:
         seq = 0
 
         if packet.cmd_id == self.CMD_ID_CONN_REQ:
-            raw = bytearray(b'conn_req:')
-            raw.extend(self.PORT_TELLO_VIDEO.to_bytes(2, byteorder='little'))
+            raw = bytearray(b'conn_req:' + self.PORT_TELLO_VIDEO.to_bytes(2, byteorder='little'))
             self.seq_num += 1
 
         elif packet.cmd_id == self.CMD_ID_TIME_REQ:
@@ -168,4 +186,5 @@ class AdvancedTello:
         self.socket.sendto(raw, self.tello_address)
 
 
-logging.basicConfig(level=logging.DEBUG)
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
