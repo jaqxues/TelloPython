@@ -26,7 +26,10 @@ Rewriting Tello Python Apis for Python3
   the `cmdId` field of the result of method `com.ryzerobotics.tello.gcs.ui.bean.SocketPacketEntity a(byte[], int)`. 
   Note that the `byte[]` sometimes contains useful information in form of text.
 
-## Using the Joystick command
+
+## Using different commands
+
+###  The Joystick command
 The joystick is handled by `com.ryzerobotics.tello.gcs.core.cmd.d.a(int, int, long, long, long)`
 Values are set using Commands in "ZOCmdSendManager". Chinese names for the values are mentioned in log statements with 
 tag "yaogan" - "Joystick"). You can understand their meaning by Trial and Error or hooking the Tello App and seeing
@@ -49,3 +52,7 @@ mode). The values of the other arguments are ints between 364 - 1684 (both inclu
 * Max (movement on corresponding axis): 1684
 
 Speed per axis given by `abs(1024 - x)`. Direction on axis given by `x > 1024`
+
+## The Flip command
+The Flip command takes an int (0 <= int <= 7) to set the direction. 0, 1, 2, 3 are front-, left-, back-, right-flip
+respectively. Values 4, 5, 6, 7 are for diagonal flips.
