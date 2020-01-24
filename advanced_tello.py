@@ -74,6 +74,7 @@ class AdvancedTello:
     CMD_ID_JOYSTICK = 80
     CMD_ID_TAKE_OFF = 84
     CMD_ID_LAND = 85
+    CMD_ID_FLIP = 92
     CMD_ID_ALT_LIMIT = 4182
 
     PORT_TELLO_CMD = 8889
@@ -108,6 +109,10 @@ class AdvancedTello:
 
     def land(self):
         self._send_packet(SocketPacket(self.CMD_ID_LAND, 104, data=bytearray(b'\x00')))
+
+    def flip(self, direction=0):
+        assert direction in range(8)
+        self._send_packet(SocketPacket(self.CMD_ID_FLIP, 112, data=bytearray([direction])))
 
     def start_joystick(self):
         self.joystick_emitter.start()
@@ -161,7 +166,7 @@ class AdvancedTello:
 
         elif packet.cmd_id == self.CMD_ID_TIME_REQ:
             dt = datetime.now()
-            # First Byte empty (0x00)
+            # First Byte empty (0)
             data = bytearray(b'\x00' +
                              dt.year.to_bytes(2, byteorder='little') +
                              dt.month.to_bytes(2, byteorder='little') +
