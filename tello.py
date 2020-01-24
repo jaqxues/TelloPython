@@ -104,6 +104,9 @@ class DroneInterface(ABC):
     def get_sdk_name(self):
         pass
 
+    def reset_queue(self):
+        self.scheduled_responses.value = 0
+
 
 class Drone1_3(DroneInterface):
     def get_sdk_name(self):
