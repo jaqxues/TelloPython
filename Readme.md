@@ -18,8 +18,8 @@ Rewriting Tello Python Apis for Python3
   (preferably from Jadx). A more complete list (still maybe not all ids) can be found in `cmd_ids`
 * You should be able to figure out some Commands by having a look at the class `com.ryzerobotics.tello.gcs.core.cmd.c`
   ("ZOCmdStore")
-* By setting the Tello Application to `UserDebuggable` you can figure out the ids of the buttons and search for their
-  `onClickListener` (done to find `flip` command)
+* By setting the Tello Application to `UserDebuggable` you can use the "Android Layout Inspector" and figure out the ids
+  of the buttons and search for their `onClickListener` (done to find `flip` command)
 * With Xposed, you can hook every method of the classes extending `e`. Check what Id gets sent when using different
   features. (Takeoff, land etc.). A simpler way (less complete) would be hooking the before mentioned"ZOCmdStore" class.
 * Similarly, you can hook the constructor of the class `com.ryzerobotics.tello.gcs.core.c` ("ZOCmdParser") and log 
