@@ -1,7 +1,17 @@
 # TelloPython
-Rewriting Tello Python Apis for Python3
+*Allows to control your Tello Drone via Python.* 
 
-## Structure
+In addition to the "official" and documented APIs, TelloPython also supports also a number of reverse engineered 
+function, such as "Flip", which are not in mentioned in the documentation, and only accessible through the App. Have a
+look [demo.py](demo.py), a small script to control the drone with your keyboard, which is not possible with the 
+documented APIs (using reverse engineered Joystick Controls).
+
+This Readme also goes through the Basics of how the Tello App was reverse engineered and a basic breakdown on how the
+app works.
+
+# Introduction to reverse engineering
+
+## Basics
 * The Tello App does not send Strings (e. g. "land" or "takeoff" to the Drone). Instead it sends Command Ids to the 
   drone (shorts). To find the ids:
 * The `SocketPacketEntitiy` class contains different fields that you need to figure out before sending any command. To
