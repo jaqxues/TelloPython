@@ -108,6 +108,10 @@ class DroneInterface(ABC):
         self.scheduled_responses.value = 0
 
 
+def _validate_move_distance(dist):
+    return validate(dist, 20, 500)
+
+
 class Drone1_3(DroneInterface):
     def get_sdk_name(self):
         return "1.3"
@@ -131,7 +135,7 @@ class Drone1_3(DroneInterface):
         return self.send_command('emergency', none_response=True)  # For some reason does not send any response
 
     def _move(self, direction, distance):
-        return self.send_command(f'{direction} {self._validate_move_distance(distance)}', self.move_timeout)
+        return self.send_command(f'{direction} {_validate_move_distance(distance)}', self.move_timeout)
 
     def move_backward(self, distance):
         return self._move('back', distance)
@@ -226,9 +230,6 @@ class Drone1_3(DroneInterface):
         return self.states
 
     def _validate_distance(self, dist):
-        return validate(dist, 20, 500)
-
-    def _validate_move_distance(self, dist):
         return validate(dist, 20, 500)
 
     def _validate_degree(self, degree):

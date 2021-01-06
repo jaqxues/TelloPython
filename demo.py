@@ -4,26 +4,29 @@ import keyboard
 
 from advanced_tello import AdvancedTello
 
-"""
-# Troubleshooting Step: Uncomment if Tello drone does not respond via AdvancedTello api
+'''
+Troubleshooting Step - In case the drone does not respond to any commands via the 'advanced' API
+
+Just setting up the sockets and listeners from the initial API should be enough to make it respond to the advanced API
+'''
+# If not needed, you can comment the following lines
 from tello import Drone1_3
 Drone1_3()
-"""
+
 drone = AdvancedTello()
 drone.connect()
 drone.start_joystick()
 drone.update_joystick(1024, 1024, 1024, 1024, 0)
-drone.take_off()
 
 keys = {
-    "a": (0, -1),
-    "d": (0, +1),
-    "w": (1, +1),
-    "s": (1, -1),
-    "i": (2, +1),
-    "k": (2, -1),
-    "j": (3, +1),
-    "l": (3, -1)
+    'd': (0, +1),
+    'a': (0, -1),
+    'w': (1, +1),
+    's': (1, -1),
+    'i': (2, +1),
+    'k': (2, -1),
+    'l': (3, +1),
+    'j': (3, -1)
 }
 
 flip_keys = {
@@ -37,6 +40,31 @@ flip_keys = {
     7: 7
 }
 
+print('''
+Starting demo. Listing Controls
+
+Using Joystick via keys:
+
+Takeoff: Space
+Land   : Q
+Close  : P
+
+Directional Movement
+* W  /  S    -    Forwards           /  Backwards
+* A  /  D    -    Left               /  Right
+* I  /  K    -    Up                 /  Down
+* J  /  L    -    Counter-clockwise  /  Clockwise
+
+Flip via NumPad keys (or conventional number keys):
+-------------------------------------------------------------------------------
+| 7    Diagonal Front-Left    | 8    Front    | 9     Diagonal Front-Right    |
+-------------------------------------------------------------------------------
+| 4    Left                   | 5             | 6     Right                   |
+-------------------------------------------------------------------------------
+| 1    Diagonal Back-Left     | 2    Back     | 3     Diagonal Front-Left     |
+-------------------------------------------------------------------------------
+''')
+
 while True:
     vals = [1024] * 4
     for key, (idx, i) in keys.items():
@@ -46,11 +74,14 @@ while True:
         if keyboard.is_pressed(str(key)):
             drone.flip(i)
     drone.update_joystick(*vals, 0)
-    if keyboard.is_pressed("q"):
+    if keyboard.is_pressed('space'):
+        drone.take_off()
+    if (e := keyboard.is_pressed('p')) or keyboard.is_pressed('q'):
         drone.stop_joystick()
         drone.land()
+        if e:
+            break
     time.sleep(0.02)
-
 
 ###############################################
 # Previous Tests
