@@ -56,7 +56,7 @@ class SocketPacket:
             seq_num = int.from_bytes(raw[7:9], byteorder='little')
             data = raw[9:-2]
 
-            return cls(cmd_id, data, pac_type, seq_num)
+            return cls(cmd_id, pac_type, seq_num, data)
 
         elif prefix == 99:
             if raw == bytearray(b'conn_ack:' + tello.PORT_TELLO_VIDEO.to_bytes(2, byteorder='little')):
